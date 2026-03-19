@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0a0f;
+  --surface:   #111118;
+  --border:    #1e1e2e;
+  --border-hi: #2e2e4e;
+  --accent:    #5b6cff;
+  --accent-lo: rgba(91,108,255,0.12);
+  --accent-hi: #8b9aff;
+  --text:      #e8e8f0;
+  --text-muted:#7070a0;
+  --text-dim:  #404060;
+  --user-bg:   #161625;
+  --green:     #3ddc97;
+  --red:       #ff5f7e;
+  --yellow:    #ffc847;
+  --font-ui:   'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius:    10px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.prose { line-height: 1.7; font-family: var(--font-mono); font-size: 0.82rem; font-weight: 300; }
+.prose p { margin-bottom: 0.75rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--accent-hi); font-weight: 500; }
+.prose code { background: rgba(91,108,255,0.15); color: var(--accent-hi); padding: 1px 5px; border-radius: 4px; font-size: 0.78rem; }
+.prose pre { background: #0d0d18; border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
+.prose pre code { background: none; padding: 0; color: var(--text); }
+.prose ul, .prose ol { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.prose li { margin-bottom: 0.25rem; }
+.prose table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.78rem; }
+.prose th { background: var(--accent-lo); color: var(--accent-hi); padding: 0.4rem 0.75rem; text-align: left; border: 1px solid var(--border-hi); font-family: var(--font-ui); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.prose td { padding: 0.4rem 0.75rem; border: 1px solid var(--border); color: var(--text); }
+.prose tr:hover td { background: rgba(255,255,255,0.02); }
+.prose h1,.prose h2,.prose h3 { font-family: var(--font-ui); font-weight: 700; color: var(--text); margin: 1rem 0 0.5rem; }
