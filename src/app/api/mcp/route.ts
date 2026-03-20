@@ -90,29 +90,56 @@ async function handleMessage(msg: Record<string, unknown>) {
 
 export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
+
+  // Użyj PUBLIC_URL z Railway lub zbuduj z nagłówków requestu
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const baseUrl = `${proto}://${host}`;
+
   const stream = new ReadableStream({
     start(controller) {
-      const baseUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "endpoint", endpoint: `${baseUrl}/api/mcp` })}\n\n`));
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: "endpoint", endpoint: `${baseUrl}/api/mcp` })}\n\n`)
+      );
       const keepAlive = setInterval(() => {
         try { controller.enqueue(encoder.encode(": keepalive\n\n")); } catch { clearInterval(keepAlive); }
       }, 15000);
       req.signal.addEventListener("abort", () => { clearInterval(keepAlive); controller.close(); });
     },
   });
-  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": "*" } });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const response = await handleMessage(body);
-    return new Response(response ? JSON.stringify(response) : "", { status: response ? 200 : 204, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+    return new Response(response ? JSON.stringify(response) : "", {
+      status: response ? 200 : 204,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
   } catch {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
 export async function OPTIONS() {
-  return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
