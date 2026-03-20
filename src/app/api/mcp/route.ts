@@ -71,7 +71,11 @@ async function handleMessage(msg: Record<string, unknown>) {
   const { method, params, id } = msg as { method: string; params?: Record<string, unknown>; id?: unknown };
   switch (method) {
     case "initialize":
-      return mcpResponse(id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "dv360-mock", version: "1.0.0" } });
+      return mcpResponse(id, {
+        protocolVersion: "2025-03-26",
+        capabilities: { tools: {} },
+        serverInfo: { name: "dv360-mock", version: "1.0.0" },
+      });
     case "tools/list":
       return mcpResponse(id, { tools: TOOLS });
     case "tools/call": {
@@ -83,15 +87,63 @@ async function handleMessage(msg: Record<string, unknown>) {
         return mcpResponse(id, { content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true });
       }
     }
-    case "notifications/initialized": return null;
-    default: return { jsonrpc: "2.0", id, error: { code: -32601, message: `Method not found: ${method}` } };
+    case "notifications/initialized":
+    case "ping":
+      return null;
+    default:
+      return { jsonrpc: "2.0", id, error: { code: -32601, message: `Method not found: ${method}` } };
   }
 }
 
+// Streamable HTTP — obsługuje zarówno pojedyncze requesty jak i SSE streaming
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const accept = req.headers.get("accept") || "";
+
+    const response = await handleMessage(body);
+
+    // Jeśli klient akceptuje SSE — odpowiedz streamem
+    if (accept.includes("text/event-stream")) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          if (response) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(response)}\n\n`));
+          }
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type, Accept, Mcp-Session-Id",
+        },
+      });
+    }
+
+    // Standardowa odpowiedź JSON
+    return new Response(response ? JSON.stringify(response) : "", {
+      status: response ? 200 : 204,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Accept, Mcp-Session-Id",
+      },
+    });
+  } catch {
+    return new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET — SSE endpoint dla starszych klientów
 export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
-
-  // Użyj PUBLIC_URL z Railway lub zbuduj z nagłówków requestu
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   const proto = req.headers.get("x-forwarded-proto") || "https";
   const baseUrl = `${proto}://${host}`;
@@ -118,28 +170,12 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const response = await handleMessage(body);
-    return new Response(response ? JSON.stringify(response) : "", {
-      status: response ? 200 : 204,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
-  } catch {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
-
 export async function OPTIONS() {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Accept, Mcp-Session-Id",
     },
   });
 }
